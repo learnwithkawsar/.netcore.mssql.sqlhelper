@@ -13,11 +13,7 @@ namespace Core.MSSQL.SqlHelper
             {
                 throw new ArgumentNullException(nameof(connectionString));
             }
-
-           
-
-           // services.AddScoped<IInternalExceptionService, ExceptionService>(sp => new ExceptionService(connectionString));
-            services.AddScoped<ISqlHelperService, SqlHelperService>(sp => new SqlHelperService(connectionString));
+            services.AddSingleton<ISqlHelperService, SqlHelperService>(sp => new SqlHelperService(connectionString));
         }
     }
 }
