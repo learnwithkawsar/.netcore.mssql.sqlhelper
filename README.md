@@ -91,6 +91,25 @@ Version 2.0 contains breaking changes:
 - **`GetDataTableBySPWithParam(string, params SqlParameter[])`** now passes the parameters
   correctly (1.x passed them as parameter values).
 
+## Releasing (maintainers)
+
+Pushing a version tag publishes the package to NuGet through
+[`.github/workflows/publish.yml`](.github/workflows/publish.yml).
+
+1. One-time setup: create an API key on nuget.org (scope: push, package `Core.MSSQL.SqlHelper`)
+   and add it to the GitHub repository as the secret `NUGET_API_KEY`
+   (Settings → Secrets and variables → Actions).
+2. Set `<Version>` in `Core.MSSQL.SqlHelper/Core.MSSQL.SqlHelper.csproj` and merge to `master`.
+3. Tag that commit with the same version and push the tag:
+
+   ```powershell
+   git tag v2.0.0
+   git push origin v2.0.0
+   ```
+
+The workflow fails without publishing if the tag doesn't match `<Version>` or the secret is missing.
+It builds and tests before pushing, and skips a version that is already on NuGet.
+
 ## License
 
 MIT
