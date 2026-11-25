@@ -96,9 +96,15 @@ Version 2.0 contains breaking changes:
 Pushing a version tag publishes the package to NuGet through
 [`.github/workflows/publish.yml`](.github/workflows/publish.yml).
 
-1. One-time setup: create an API key on nuget.org (scope: push, package `Core.MSSQL.SqlHelper`)
-   and add it to the GitHub repository as the secret `NUGET_API_KEY`
-   (Settings → Secrets and variables → Actions).
+Publishing uses [NuGet trusted publishing](https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing):
+the workflow signs in with a GitHub OIDC token and gets a temporary API key, so no API key is stored.
+
+1. One-time setup:
+   - On nuget.org, open your username menu → **Trusted Publishing** and add a policy with
+     Repository Owner `learnwithkawsar`, Repository `.netcore.mssql.sqlhelper`,
+     Workflow File `publish.yml`, and no Environment.
+   - In the GitHub repository, add the secret `NUGET_USER` with your nuget.org username
+     (profile name, not email) under Settings → Secrets and variables → Actions.
 2. Set `<Version>` in `Core.MSSQL.SqlHelper/Core.MSSQL.SqlHelper.csproj` and merge to `master`.
 3. Tag that commit with the same version and push the tag:
 
@@ -107,7 +113,7 @@ Pushing a version tag publishes the package to NuGet through
    git push origin v2.0.0
    ```
 
-The workflow fails without publishing if the tag doesn't match `<Version>` or the secret is missing.
+The workflow fails without publishing if the tag doesn't match `<Version>` or `NUGET_USER` is missing.
 It builds and tests before pushing, and skips a version that is already on NuGet.
 
 ## License

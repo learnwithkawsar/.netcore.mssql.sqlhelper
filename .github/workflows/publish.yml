@@ -1,11 +1,15 @@
 name: Publish to NuGet
 
 # Runs when a version tag such as v2.0.0 is pushed.
-# Requires a repository secret named NUGET_API_KEY.
+# Uses NuGet trusted publishing (GitHub OIDC), so no long-lived API key is stored.
+# Requires:
+#   - a trusted publishing policy on nuget.org for this repository and workflow file (publish.yml)
+#   - a repository secret NUGET_USER holding the nuget.org username (profile name, not email)
 on:
   push:
     tags:
       - "v*.*.*"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -22,6 +26,9 @@ env:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # lets the job request a GitHub OIDC token for NuGet login
 
     steps:
       - name: Checkout
@@ -34,6 +41,10 @@ jobs:
 
       - name: Check tag matches project version
         run: |
+          if [ "$GITHUB_REF_TYPE" != "tag" ]; then
+            echo "::error::Run this workflow from a version tag (e.g. v2.0.0), not from branch $GITHUB_REF_NAME"
+            exit 1
+          fi
           TAG_VERSION="${GITHUB_REF_NAME#v}"
           PROJECT_VERSION="$(dotnet msbuild "$PROJECT" -getProperty:Version)"
           echo "Tag version:     $TAG_VERSION"
@@ -43,12 +54,12 @@ jobs:
             exit 1
           fi
 
-      - name: Check API key is configured
+      - name: Check NuGet user is configured
         env:
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+          NUGET_USER: ${{ secrets.NUGET_USER }}
         run: |
-          if [ -z "$NUGET_API_KEY" ]; then
-            echo "::error::Repository secret NUGET_API_KEY is not set"
+          if [ -z "$NUGET_USER" ]; then
+            echo "::error::Repository secret NUGET_USER (your nuget.org username) is not set"
             exit 1
           fi
 
@@ -64,9 +75,16 @@ jobs:
       - name: Pack
         run: dotnet pack "$PROJECT" --configuration Release --no-build --output artifacts
 
+      # Requested right before the push: the temporary API key is valid for 1 hour.
+      - name: NuGet login (OIDC to temporary API key)
+        id: login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
       - name: Push to NuGet
         env:
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
         run: >
           dotnet nuget push "artifacts/*.nupkg"
           --api-key "$NUGET_API_KEY"
