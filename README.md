@@ -4,7 +4,7 @@ Simple helpers for common Microsoft SQL Server operations in .NET and ASP.NET Co
 run stored procedures or SQL and get back a `DataTable`, a scalar value or the number
 of affected rows, synchronously or asynchronously.
 
-Targets `netstandard2.0` and `net8.0`, and uses [`Microsoft.Data.SqlClient`](https://www.nuget.org/packages/Microsoft.Data.SqlClient).
+Targets `netstandard2.0` and `net10.0`, and uses [`Microsoft.Data.SqlClient`](https://www.nuget.org/packages/Microsoft.Data.SqlClient).
 
 ## Install
 
