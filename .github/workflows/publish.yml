@@ -1,0 +1,80 @@
+name: Publish to NuGet
+
+# Runs when a version tag such as v2.0.0 is pushed.
+# Requires a repository secret named NUGET_API_KEY.
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  PROJECT: Core.MSSQL.SqlHelper/Core.MSSQL.SqlHelper.csproj
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Check tag matches project version
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          PROJECT_VERSION="$(dotnet msbuild "$PROJECT" -getProperty:Version)"
+          echo "Tag version:     $TAG_VERSION"
+          echo "Project version: $PROJECT_VERSION"
+          if [ "$TAG_VERSION" != "$PROJECT_VERSION" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match <Version>$PROJECT_VERSION</Version> in $PROJECT"
+            exit 1
+          fi
+
+      - name: Check API key is configured
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: |
+          if [ -z "$NUGET_API_KEY" ]; then
+            echo "::error::Repository secret NUGET_API_KEY is not set"
+            exit 1
+          fi
+
+      - name: Restore
+        run: dotnet restore Core.MSSQL.SqlHelper.sln
+
+      - name: Build
+        run: dotnet build Core.MSSQL.SqlHelper.sln --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test Core.MSSQL.SqlHelper.sln --configuration Release --no-build
+
+      - name: Pack
+        run: dotnet pack "$PROJECT" --configuration Release --no-build --output artifacts
+
+      - name: Push to NuGet
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: >
+          dotnet nuget push "artifacts/*.nupkg"
+          --api-key "$NUGET_API_KEY"
+          --source https://api.nuget.org/v3/index.json
+          --skip-duplicate
+
+      - name: Upload package
+        uses: actions/upload-artifact@v7
+        with:
+          name: nuget-package
+          path: artifacts/*.nupkg
