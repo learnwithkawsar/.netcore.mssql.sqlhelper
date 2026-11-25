@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Data;
-using System.Data.SqlClient;
+using Microsoft.Data.SqlClient;
 using System.Linq;
-using System.Web;
 using System.Xml;
 
 namespace Core.MSSQL.SqlHelper
@@ -27,26 +25,21 @@ namespace Core.MSSQL.SqlHelper
             return Res.Trim(',');
         }
 
-        private const string COMMAND_TIMEOUT_KEY = "Command_Timeout";
         /// <summary>
-        /// FK : Make command timeout work
+        /// Command timeout in seconds applied to every command created by this helper.
+        /// 0 means no timeout (the historical default of this library).
         /// </summary>
-        /// <param name="command"></param>
+        public static int CommandTimeout { get; set; } = 0;
+
+        /// <summary>
+        /// Applies <see cref="CommandTimeout"/> to the given command.
+        /// </summary>
         public static void UpdateCommandTimeout(SqlCommand command)
         {
-            command.CommandTimeout = 0;
-            //if (command != null)
-            //{
-            //    string timeoutValue = ConfigurationManager.AppSettings[COMMAND_TIMEOUT_KEY];
-            //    if (timeoutValue != null)
-            //    {
-            //        if (!string.Empty.Equals(timeoutValue))
-            //        {
-            //            int timeout = int.Parse(timeoutValue);
-            //            command.CommandTimeout = timeout;
-            //        }
-            //    }
-            //}
+            if (command != null)
+            {
+                command.CommandTimeout = CommandTimeout;
+            }
         }
 
 
@@ -558,24 +551,6 @@ namespace Core.MSSQL.SqlHelper
 
             }
         }
-
-        /// <summary>
-        /// Added By Kawsar Ahmed
-        /// Execute a SqlCommand (that returns no resultset and takes no parameters) against the provided SqlTransaction. 
-        /// </summary>
-        /// <remarks>
-        /// e.g.:  
-        ///  int result = ExecuteNonQuery(trans, CommandType.StoredProcedure, "PublishOrders");
-        /// </remarks>
-        /// <param name="transaction">A valid SqlTransaction</param>
-        /// <param name="commandType">The CommandType (stored procedure, text, etc.)</param>
-        /// <param name="commandText">The stored procedure name or T-SQL command</param>
-        /// <returns>An int representing the number of rows affected by the command</returns>
-        //public static int ExecuteNonQuery(SqlTransaction transaction, CommandType commandType, string commandText, bool hasOutput)
-        //{
-        //    // Pass through the call providing null for the set of SqlParameters
-        //    return ExecuteNonQuery(transaction, commandType, commandText, hasOutput, (SqlParameter[])null);
-        //}
 
 
         /// <summary>
